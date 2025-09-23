@@ -65,7 +65,6 @@ async function scrapeStatusForDay(url, date) {
     const dom = new JSDOM(html);
     const text = dom.window.document.body.textContent;
 
-    // Check if it's a holiday first
     const holiday = await checkHoliday(date);
     
     const results = {};
@@ -144,16 +143,16 @@ app.get("/api/dates", (req, res) => {
   });
 });
 
-// Dynamic RSS feed — only change: replace localhost with BASE_URL
+// Dynamic RSS feed with 7-minute cache
 const BASE_URL = process.env.BASE_URL || `https://batangas-school-status.onrender.com`;
+let cachedRSS = null;
 
-app.get("/rss.xml", async (req, res) => {
+async function updateRSSCache() {
   try {
     const data = await scrapeStatus();
     const now = new Date().toUTCString();
 
     let items = [];
-    
     Object.entries(data).forEach(([cityKey, cityData]) => {
       items.push(`
       <item>
@@ -164,7 +163,7 @@ app.get("/rss.xml", async (req, res) => {
       </item>`);
     });
 
-    const rss = `<?xml version="1.0" encoding="UTF-8" ?>
+    cachedRSS = `<?xml version="1.0" encoding="UTF-8" ?>
 <rss version="2.0">
   <channel>
     <title>Batangas School Suspension Feed</title>
@@ -174,11 +173,21 @@ app.get("/rss.xml", async (req, res) => {
     ${items.join("\n")}
   </channel>
 </rss>`;
-
-    res.type("application/rss+xml").send(rss);
+    console.log("RSS cache updated");
   } catch (e) {
-    res.status(500).send("Error generating RSS");
+    console.error("Failed to update RSS cache:", e);
   }
+}
+
+// Initial population
+updateRSSCache();
+
+// Refresh every 7 minutes
+setInterval(updateRSSCache, 7 * 60 * 1000);
+
+app.get("/rss.xml", (req, res) => {
+  if (!cachedRSS) return res.status(503).send("RSS feed not ready");
+  res.type("application/rss+xml").send(cachedRSS);
 });
 
 app.use(express.static("."));
