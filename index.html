@@ -173,6 +173,7 @@ async function updateRSSCache() {
     ${items.join("\n")}
   </channel>
 </rss>`;
+
     console.log("RSS cache updated");
   } catch (e) {
     console.error("Failed to update RSS cache:", e);
@@ -190,7 +191,9 @@ app.get("/rss.xml", (req, res) => {
   res.type("application/rss+xml").send(cachedRSS);
 });
 
-// Serve static files without overriding /rss.xml
-app.use(express.static(".", { extensions: ["html"] }));
+// Serve your existing HTML file for the main page
+app.get("/", (req, res) => {
+  res.sendFile("index.html", { root: "." });
+});
 
 app.listen(PORT, "0.0.0.0", () => console.log(`Running at http://0.0.0.0:${PORT}`));
