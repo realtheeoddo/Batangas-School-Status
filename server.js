@@ -5,7 +5,6 @@ import { JSDOM } from "jsdom";
 const app = express();
 const PORT = 5000;
 
-// All cities and municipalities in Batangas province
 const BATANGAS_CITIES = [
   "Batangas City", "Lipa City", "Tanauan City", "Santo Tomas City", "Calaca City",
   "Agoncillo", "Alitagtag", "Balayan", "Balete", "Bauan", "Calatagan", "Cuenca", 
@@ -15,7 +14,6 @@ const BATANGAS_CITIES = [
   "Taysan", "Tingloy", "Tuy"
 ];
 
-// Generate dynamic URLs for Rappler's "walang pasok" pages
 function generateRapplerUrls() {
   const today = new Date();
   const tomorrow = new Date(today);
@@ -24,33 +22,24 @@ function generateRapplerUrls() {
   const formatDate = (date) => {
     const months = ['january', 'february', 'march', 'april', 'may', 'june', 
                    'july', 'august', 'september', 'october', 'november', 'december'];
-    const month = months[date.getMonth()];
-    const day = date.getDate();
-    const year = date.getFullYear();
-    return `${month}-${day}-${year}`;
+    return `${months[date.getMonth()]}-${date.getDate()}-${date.getFullYear()}`;
   };
 
-  const todayUrl = `https://www.rappler.com/philippines/class-suspensions-walang-pasok-${formatDate(today)}/`;
-  const tomorrowUrl = `https://www.rappler.com/philippines/class-suspensions-walang-pasok-${formatDate(tomorrow)}/`;
-
-  return { todayUrl, tomorrowUrl };
+  return {
+    todayUrl: `https://www.rappler.com/philippines/class-suspensions-walang-pasok-${formatDate(today)}/`,
+    tomorrowUrl: `https://www.rappler.com/philippines/class-suspensions-walang-pasok-${formatDate(tomorrow)}/`
+  };
 }
 
-// Check if a date is a Philippine holiday
 async function checkHoliday(date) {
   try {
     const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const dateStr = `${year}-${month}-${day}`;
-    
     const response = await fetch(`https://date.nager.at/api/v3/PublicHolidays/${year}/PH`);
     const holidays = await response.json();
-    
+    const dateStr = `${year}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
     const holiday = holidays.find(h => h.date === dateStr);
     return holiday ? holiday.name : null;
-  } catch (error) {
-    console.error('Error checking holiday:', error);
+  } catch {
     return null;
   }
 }
@@ -58,31 +47,24 @@ async function checkHoliday(date) {
 async function scrapeStatusForDay(url, date) {
   try {
     const resp = await fetch(url);
-    if (!resp.ok) {
-      throw new Error(`HTTP ${resp.status}`);
-    }
     const html = await resp.text();
     const dom = new JSDOM(html);
     const text = dom.window.document.body.textContent;
-
     const holiday = await checkHoliday(date);
-    
+
     const results = {};
-    
     BATANGAS_CITIES.forEach(city => {
       const cityKey = city.toLowerCase().replace(/\s+/g, '-').replace('city', '').replace(/^-|-$/g, '');
-      
-      if (holiday) {
-        results[cityKey] = `Holiday: ${holiday}`;
-      } else {
+      if (holiday) results[cityKey] = `Holiday: ${holiday}`;
+      else {
         const cityVariations = [city, city.replace(' City', ''), city.replace('City', '')];
-        const found = cityVariations.some(variation => text.includes(variation));
+        const found = cityVariations.some(v => text.includes(v));
         results[cityKey] = found ? "No School Today" : "Normal Classes";
       }
     });
 
     return results;
-  } catch (error) {
+  } catch {
     const results = {};
     BATANGAS_CITIES.forEach(city => {
       const cityKey = city.toLowerCase().replace(/\s+/g, '-').replace('city', '').replace(/^-|-$/g, '');
@@ -97,14 +79,13 @@ async function scrapeStatus() {
   const today = new Date();
   const tomorrow = new Date(today);
   tomorrow.setDate(today.getDate() + 1);
-  
+
   const [todayData, tomorrowData] = await Promise.all([
     scrapeStatusForDay(todayUrl, today),
     scrapeStatusForDay(tomorrowUrl, tomorrow)
   ]);
 
   const combinedData = {};
-  
   BATANGAS_CITIES.forEach(city => {
     const cityKey = city.toLowerCase().replace(/\s+/g, '-').replace('city', '').replace(/^-|-$/g, '');
     combinedData[cityKey] = {
@@ -130,19 +111,9 @@ app.get("/api/dates", (req, res) => {
   const today = new Date();
   const tomorrow = new Date(today);
   tomorrow.setDate(today.getDate() + 1);
-  
-  const formatDisplayDate = (date) => {
-    const months = ['January', 'February', 'March', 'April', 'May', 'June', 
-                   'July', 'August', 'September', 'October', 'November', 'December'];
-    return `${months[date.getMonth()]} ${date.getDate()}`;
-  };
-
-  res.json({
-    today: formatDisplayDate(today),
-    tomorrow: formatDisplayDate(tomorrow)
-  });
+  const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  res.json({ today: `${months[today.getMonth()]} ${today.getDate()}`, tomorrow: `${months[tomorrow.getMonth()]} ${tomorrow.getDate()}` });
 });
 
 app.use(express.static("."));
-
 app.listen(PORT, "0.0.0.0", () => console.log(`Running at http://0.0.0.0:${PORT}`));
