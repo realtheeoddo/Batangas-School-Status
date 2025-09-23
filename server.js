@@ -7,9 +7,7 @@ const PORT = 5000;
 
 // All cities and municipalities in Batangas province
 const BATANGAS_CITIES = [
-  // Cities (5)
   "Batangas City", "Lipa City", "Tanauan City", "Santo Tomas City", "Calaca City",
-  // Municipalities (29)
   "Agoncillo", "Alitagtag", "Balayan", "Balete", "Bauan", "Calatagan", "Cuenca", 
   "Ibaan", "Laurel", "Lemery", "Lian", "Lobo", "Mabini", "Malvar", 
   "Mataasnakahoy", "Nasugbu", "Padre Garcia", "Rosario", "San Jose", "San Juan", 
@@ -73,13 +71,11 @@ async function scrapeStatusForDay(url, date) {
     const results = {};
     
     BATANGAS_CITIES.forEach(city => {
-      // Create a clean key for the city
       const cityKey = city.toLowerCase().replace(/\s+/g, '-').replace('city', '').replace(/^-|-$/g, '');
       
       if (holiday) {
         results[cityKey] = `Holiday: ${holiday}`;
       } else {
-        // Check for various city name formats in announcements
         const cityVariations = [city, city.replace(' City', ''), city.replace('City', '')];
         const found = cityVariations.some(variation => text.includes(variation));
         results[cityKey] = found ? "No School Today" : "Normal Classes";
@@ -88,7 +84,6 @@ async function scrapeStatusForDay(url, date) {
 
     return results;
   } catch (error) {
-    // Return "no announcements" for all cities if page doesn't exist
     const results = {};
     BATANGAS_CITIES.forEach(city => {
       const cityKey = city.toLowerCase().replace(/\s+/g, '-').replace('city', '').replace(/^-|-$/g, '');
@@ -109,7 +104,6 @@ async function scrapeStatus() {
     scrapeStatusForDay(tomorrowUrl, tomorrow)
   ]);
 
-  // Combine today and tomorrow data
   const combinedData = {};
   
   BATANGAS_CITIES.forEach(city => {
@@ -133,7 +127,6 @@ app.get("/api/status", async (req, res) => {
   }
 });
 
-// API endpoint to get current date information  
 app.get("/api/dates", (req, res) => {
   const today = new Date();
   const tomorrow = new Date(today);
@@ -151,7 +144,9 @@ app.get("/api/dates", (req, res) => {
   });
 });
 
-// Dynamic RSS feed
+// Dynamic RSS feed — only change: replace localhost with BASE_URL
+const BASE_URL = process.env.BASE_URL || `https://batangas-school-status.onrender.com`;
+
 app.get("/rss.xml", async (req, res) => {
   try {
     const data = await scrapeStatus();
@@ -159,14 +154,13 @@ app.get("/rss.xml", async (req, res) => {
 
     let items = [];
     
-    // Add items for all Batangas cities
     Object.entries(data).forEach(([cityKey, cityData]) => {
       items.push(`
       <item>
         <title>${cityData.name} - Today: ${cityData.today} | Tomorrow: ${cityData.tomorrow}</title>
         <description>Today: ${cityData.today}, Tomorrow: ${cityData.tomorrow}</description>
         <pubDate>${now}</pubDate>
-        <guid>http://localhost:${PORT}/#${cityKey}</guid>
+        <guid>${BASE_URL}/#${cityKey}</guid>
       </item>`);
     });
 
@@ -174,7 +168,7 @@ app.get("/rss.xml", async (req, res) => {
 <rss version="2.0">
   <channel>
     <title>Batangas School Suspension Feed</title>
-    <link>http://localhost:${PORT}/</link>
+    <link>${BASE_URL}/</link>
     <description>Daily school status for all cities and municipalities in Batangas province</description>
     <language>en-us</language>
     ${items.join("\n")}
