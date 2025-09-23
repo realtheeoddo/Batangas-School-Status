@@ -143,54 +143,6 @@ app.get("/api/dates", (req, res) => {
   });
 });
 
-// Dynamic RSS feed with 7-minute cache
-const BASE_URL = process.env.BASE_URL || `https://batangas-school-status.onrender.com`;
-let cachedRSS = null;
-
-async function updateRSSCache() {
-  try {
-    const data = await scrapeStatus();
-    const now = new Date().toUTCString();
-
-    let items = [];
-    Object.entries(data).forEach(([cityKey, cityData]) => {
-      items.push(`
-      <item>
-        <title>${cityData.name} - Today: ${cityData.today} | Tomorrow: ${cityData.tomorrow}</title>
-        <description>Today: ${cityData.today}, Tomorrow: ${cityData.tomorrow}</description>
-        <pubDate>${now}</pubDate>
-        <guid>${BASE_URL}/#${cityKey}</guid>
-      </item>`);
-    });
-
-    cachedRSS = `<?xml version="1.0" encoding="UTF-8" ?>
-<rss version="2.0">
-  <channel>
-    <title>Batangas School Suspension Feed</title>
-    <link>${BASE_URL}/</link>
-    <description>Daily school status for all cities and municipalities in Batangas province</description>
-    <language>en-us</language>
-    ${items.join("\n")}
-  </channel>
-</rss>`;
-    console.log("RSS cache updated");
-  } catch (e) {
-    console.error("Failed to update RSS cache:", e);
-  }
-}
-
-// Initial population
-updateRSSCache();
-
-// Refresh every 7 minutes
-setInterval(updateRSSCache, 7 * 60 * 1000);
-
-app.get("/rss.xml", (req, res) => {
-  if (!cachedRSS) return res.status(503).send("RSS feed not ready");
-  res.type("application/rss+xml").send(cachedRSS);
-});
-
-// --- FIXED STATIC SERVING ---
-app.use(express.static(".", { extensions: ["html"] }));
+app.use(express.static("."));
 
 app.listen(PORT, "0.0.0.0", () => console.log(`Running at http://0.0.0.0:${PORT}`));
