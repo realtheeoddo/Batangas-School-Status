@@ -190,5 +190,7 @@ app.get("/rss.xml", (req, res) => {
   res.type("application/rss+xml").send(cachedRSS);
 });
 
-app.use(express.static("."));
+// --- FIXED STATIC SERVING ---
+app.use(express.static(".", { extensions: ["html"] }));
+
 app.listen(PORT, "0.0.0.0", () => console.log(`Running at http://0.0.0.0:${PORT}`));
