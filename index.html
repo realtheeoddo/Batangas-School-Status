@@ -144,7 +144,7 @@ app.get("/api/dates", (req, res) => {
 });
 
 // Dynamic RSS feed with 7-minute cache
-const BASE_URL = process.env.BASE_URL || "https://batangas-school-status.onrender.com";
+const BASE_URL = process.env.BASE_URL || `https://batangas-school-status.onrender.com`;
 let cachedRSS = null;
 
 async function updateRSSCache() {
@@ -173,14 +173,13 @@ async function updateRSSCache() {
     ${items.join("\n")}
   </channel>
 </rss>`;
-
     console.log("RSS cache updated");
   } catch (e) {
     console.error("Failed to update RSS cache:", e);
   }
 }
 
-// Initial cache population
+// Initial population
 updateRSSCache();
 
 // Refresh every 7 minutes
@@ -191,9 +190,34 @@ app.get("/rss.xml", (req, res) => {
   res.type("application/rss+xml").send(cachedRSS);
 });
 
-// Serve your existing HTML file for the main page
-app.get("/", (req, res) => {
-  res.sendFile("index.html", { root: "." });
+// --- New browser-friendly RSS page ---
+app.get("/rss", async (req, res) => {
+  const data = await scrapeStatus();
+  const htmlItems = Object.entries(data).map(([cityKey, cityData]) => `
+    <div style="border:1px solid #ccc; padding:10px; margin:5px;">
+      <h3>${cityData.name}</h3>
+      <p>Today: ${cityData.today}</p>
+      <p>Tomorrow: ${cityData.tomorrow}</p>
+    </div>
+  `).join("");
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <title>Batangas School Status</title>
+    </head>
+    <body>
+      <h1>Batangas School Status</h1>
+      ${htmlItems}
+    </body>
+    </html>
+  `;
+  res.send(html);
 });
+
+// --- FIXED STATIC SERVING ---
+app.use(express.static(".", { extensions: ["html"] }));
 
 app.listen(PORT, "0.0.0.0", () => console.log(`Running at http://0.0.0.0:${PORT}`));
