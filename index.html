@@ -159,7 +159,6 @@
       margin-left: 0.5rem;
     }
 
-    /* Gradient animation */
     @keyframes greenShift {
       0% { background-color: rgba(35, 134, 54, 0.15); }
       50% { background-color: rgba(35, 180, 70, 0.25); }
@@ -287,7 +286,6 @@
         <input type="text" id="search-input" placeholder="🔍 Search cities and municipalities..." />
       </div>
       <div class="grid" id="cities-grid">
-        <!-- Cities will be dynamically loaded here -->
       </div>
     </section>
 
@@ -302,7 +300,7 @@
 
   <script>
     const cityEmojis = {
-      'batangas': '🏛️', 'lipa': '☕', 'tanauan': '🏭', 'santo-tomas': '🎓', 'calaca': '⚡',
+      'batangas': '🏛️', 'lipa': '☕', 'tanauan': '🏭', 'santo tomas city': '🎓', 'calaca': '⚡',
       'agoncillo': '🌊', 'alitagtag': '🏔️', 'balayan': '🏖️', 'balete': '🌳', 'bauan': '🐟',
       'calatagan': '🏝️', 'cuenca': '⛰️', 'ibaan': '🌾', 'laurel': '🌿', 'lemery': '🚢',
       'lian': '🌴', 'lobo': '🐺', 'mabini': '🤿', 'malvar': '🏘️', 'mataasnakahoy': '🌲',
@@ -320,7 +318,10 @@
     }
 
     function createCityCard(cityKey, cityData) {
-      const emoji = cityEmojis[cityKey] || '🏢';
+      if (cityData.name.toLowerCase() === "santo tomas") {
+        cityData.name = "Santo Tomas City";
+      }
+      const emoji = cityEmojis[cityData.name.toLowerCase()] || '🏢';
       const todayClass = getStatusClass(cityData.today);
       let tomorrowText = cityData.tomorrow;
       if (tomorrowText === "No announcements yet") {
@@ -380,7 +381,6 @@
         });
     }
 
-    // Load data on page load
     loadData();
   </script>
 </body>
