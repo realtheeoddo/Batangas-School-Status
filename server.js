@@ -49,15 +49,22 @@ async function scrapeStatusForDay(url, date) {
     const resp = await fetch(url);
     const html = await resp.text();
     const dom = new JSDOM(html);
-    const text = dom.window.document.body.textContent;
+
+    // Grab the Batangas-specific section only
+    const batangasSection = Array.from(dom.window.document.querySelectorAll("h2, h3, strong, b"))
+      .find(el => el.textContent.toLowerCase().includes("batangas"))
+      ?.parentElement?.textContent || dom.window.document.body.textContent;
+
+    const text = batangasSection;
     const holiday = await checkHoliday(date);
 
     const results = {};
     BATANGAS_CITIES.forEach(city => {
       const cityKey = city.toLowerCase().replace(/\s+/g, '-').replace('city', '').replace(/^-|-$/g, '');
-      if (holiday) results[cityKey] = `Holiday: ${holiday}`;
-      else {
-        const cityVariations = [city, city.replace(' City', ''), city.replace('City', '')];
+      if (holiday) {
+        results[cityKey] = `Holiday: ${holiday}`;
+      } else {
+        const cityVariations = [city, city.replace(" City", ""), city.replace("City", "")];
         const found = cityVariations.some(v => text.includes(v));
         results[cityKey] = found ? "No School Today" : "Normal Classes";
       }
@@ -91,7 +98,9 @@ async function scrapeStatus() {
     combinedData[cityKey] = {
       name: city,
       today: todayData[cityKey] || "No data",
-      tomorrow: tomorrowData[cityKey] || "No data"
+      tomorrow: tomorrowData[cityKey] === "Normal Classes" 
+        ? "Normal Classes (subject to change)" 
+        : tomorrowData[cityKey] || "No data"
     };
   });
 
